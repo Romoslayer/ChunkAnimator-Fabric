@@ -17,6 +17,7 @@
     "issues": "https://github.com/Romoslayer/ChunkAnimator-Fabric/issues"
   },
   "license": "MIT",
+  "icon": "assets/chunkanimator/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [
