@@ -1,0 +1,17 @@
+pluginManagement {
+	repositories {
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+		}
+		mavenCentral()
+		gradlePluginPortal()
+	}
+}
+
+rootProject.name = 'ChunkAnimator'
+
+// One subproject per supported Minecraft version. Each one compiles the shared
+// sources in /src plus its own version-specific rendering hooks.
+include 'mc26.2'
+include 'mc26.3'

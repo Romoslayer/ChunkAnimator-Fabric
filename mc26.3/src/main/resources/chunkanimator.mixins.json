@@ -1,0 +1,25 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "lumien.chunkanimator.mixin",
+  "plugin": "lumien.chunkanimator.mixin.ChunkAnimatorMixinPlugin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "common.CachedIncludeSourceMixin",
+    "common.ShaderManagerMixin",
+    "vanilla.LevelRendererMixin",
+    "vanilla.RenderSectionMixin",
+    "vanilla.SectionOcclusionGraphMixin",
+    "iris.TransformPatcherMixin",
+    "sodium.DefaultChunkRendererMixin",
+    "sodium.GlobalUniformsMixin",
+    "sodium.RenderRegionManagerMixin",
+    "sodium.UniformBufferManagerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

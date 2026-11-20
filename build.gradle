@@ -1,0 +1,151 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+}
+
+subprojects {
+	apply plugin: 'net.fabricmc.fabric-loom'
+
+	version = "${rootProject.mod_version}+mc${project.minecraft_version}"
+	group = rootProject.maven_group
+
+	base {
+		archivesName = rootProject.mod_name
+	}
+
+	repositories {
+		exclusiveContent {
+			forRepository {
+				maven {
+					name = 'Modrinth'
+					url = 'https://api.modrinth.com/maven'
+				}
+			}
+			filter {
+				includeGroup 'maven.modrinth'
+			}
+		}
+	}
+
+	// Shared, version-independent code and resources live in the root /src folder.
+	sourceSets {
+		main {
+			java.srcDirs += rootProject.file('src/main/java')
+			resources.srcDirs += rootProject.file('src/main/resources')
+		}
+	}
+
+	loom {
+		mods {
+			"${rootProject.mod_id}" {
+				sourceSet sourceSets.main
+			}
+		}
+		runs {
+			client {
+				runDir = "../run/${project.minecraft_version}"
+			}
+			remove server
+		}
+	}
+
+	// Automated in-game test: ./gradlew :mc26.3:runClientGameTest (add -PwithSodium for Sodium).
+	// Creates a world, forces fresh chunks to load and saves screenshots mid-animation.
+	fabricApi {
+		configureTests {
+			createSourceSet = true
+			modId = "${rootProject.mod_id}-gametest"
+			enableGameTests = false
+			enableClientGameTests = true
+			eula = true
+		}
+	}
+	// -PshaderPack=<path to a shader pack zip> turns that pack on for the game test (with -PwithIris).
+	tasks.matching { it.name == 'runClientGameTest' }.configureEach { task ->
+		task.doFirst {
+			// -PgraphicsApi=vulkan (or opengl) forces Minecraft's rendering backend for the game test.
+			if (rootProject.hasProperty('graphicsApi')) {
+				def api = rootProject.property('graphicsApi').toString()
+				task.args('--graphicsBackend', api)
+				// Also save it the way the video settings menu does: Iris reads options.txt at startup
+				// to decide whether to disable itself (it does not support Vulkan).
+				def options = project.file('build/run/clientGameTest/options.txt')
+				options.parentFile.mkdirs()
+				options.text = "preferredGraphicsBackend:\"${api}\"\n"
+			}
+			if (rootProject.hasProperty('shaderPack')) {
+				def pack = rootProject.file(rootProject.property('shaderPack'))
+				def runDir = project.file('build/run/clientGameTest')
+				project.copy { from pack; into new File(runDir, 'shaderpacks') }
+				def config = new File(runDir, 'config/iris.properties')
+				config.parentFile.mkdirs()
+				config.text = ["shaderPack=${pack.name}", 'enableShaders=true', 'disableUpdateMessage=true'].join('\n') + '\n'
+				task.systemProperty('chunkanimator.test.shaderPack', pack.name)
+			}
+		}
+	}
+
+	sourceSets {
+		gametest {
+			java.srcDirs += rootProject.file('src/gametest/java')
+			resources.srcDirs += rootProject.file('src/gametest/resources')
+		}
+	}
+
+	dependencies {
+		minecraft "com.mojang:minecraft:${project.minecraft_version}"
+		implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+		implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+		// Sodium is an optional dependency: only compiled against, never bundled.
+		compileOnly "maven.modrinth:sodium:${project.sodium_version}"
+		// Mod Menu is optional too: only its API is compiled against. It is on the dev runtime so
+		// the config screen can be reached from the mods list.
+		compileOnly "maven.modrinth:modmenu:${project.modmenu_version}"
+		localRuntime "maven.modrinth:modmenu:${project.modmenu_version}"
+
+		// Run the dev client with Sodium: ./gradlew :mc26.3:runClient -PwithSodium
+		// Add Iris (needs Sodium) with -PwithIris
+		if (rootProject.hasProperty('withSodium') || rootProject.hasProperty('withIris')) {
+			localRuntime "maven.modrinth:sodium:${project.sodium_version}"
+		}
+		if (rootProject.hasProperty('withIris')) {
+			localRuntime "maven.modrinth:iris:${project.iris_version}"
+		}
+	}
+
+	processResources {
+		def props = [
+				version         : project.version,
+				minecraft_range : project.minecraft_version_range,
+				loader_version  : rootProject.loader_version
+		]
+		inputs.properties props
+		filesMatching('fabric.mod.json') {
+			expand props
+		}
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		it.options.release = 25
+		it.options.encoding = 'UTF-8'
+	}
+
+	java {
+		withSourcesJar()
+		sourceCompatibility = JavaVersion.VERSION_25
+		targetCompatibility = JavaVersion.VERSION_25
+	}
+
+	jar {
+		from(rootProject.file('LICENSE')) {
+			rename { "${it}_${rootProject.mod_name}" }
+		}
+	}
+
+	// Copy finished jars to /build/libs at the root for convenience.
+	tasks.register('collectJar', Copy) {
+		from tasks.named('jar')
+		into rootProject.layout.buildDirectory.dir('libs')
+	}
+	tasks.named('build') { finalizedBy 'collectJar' }
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "chunkanimator-gametest",
+  "version": "1.0.0",
+  "name": "Chunk Animator Game Tests",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": [
+      "lumien.chunkanimator.gametest.ChunkAnimatorClientGameTest"
+    ]
+  },
+  "depends": {
+    "chunkanimator": "*",
+    "fabric-client-gametest-api-v1": "*"
+  }
+}
