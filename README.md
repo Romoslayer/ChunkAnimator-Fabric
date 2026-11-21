@@ -1,7 +1,8 @@
 # Chunk Animator (Fabric)
 
-A continuation of [Chunk Animator](https://github.com/Harleyoc1/ChunkAnimator) for Fabric on Minecraft 26.2 and 26.3.
-It's a small client-side mod that animates chunks as they load, so they don't just pop in.
+An unofficial continuation of [Chunk Animator](https://github.com/Harleyoc1/ChunkAnimator) for Fabric on Minecraft
+26.2 and 26.3. It isn't affiliated with or endorsed by the original authors. It's a small client-side mod that animates
+chunks as they load, so they don't just pop in.
 
 ## Credits
 
