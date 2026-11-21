@@ -1,0 +1,38 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/Romoslayer/ChunkAnimator-Fabric/issues"
+
+[[mods]]
+modId = "chunkanimator"
+version = "${version}"
+displayName = "Chunk Animator"
+displayURL = "https://github.com/Romoslayer/ChunkAnimator-Fabric"
+iconFile = "assets/chunkanimator/icon.png"
+authors = "Lumien"
+credits = "Harley O'Connor, Romoslayer. Easing equations by Robert Penner."
+description = '''A small client side mod that animates the appearance of chunks so that they don't just instantly appear. Works with Minecraft's renderer, Sodium and Iris.'''
+
+[[mixins]]
+config = "chunkanimator.mixins.json"
+${devtest_mixins}
+[[dependencies.chunkanimator]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${minecraft_version},)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.chunkanimator]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_range_maven}"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.chunkanimator]]
+modId = "sodium"
+type = "optional"
+versionRange = "[0.9.0,)"
+ordering = "NONE"
+side = "CLIENT"

@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import lumien.chunkanimator.ChunkAnimator;
-import net.fabricmc.loader.api.FabricLoader;
+import lumien.chunkanimator.platform.Platform;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +24,7 @@ import java.util.Locale;
 public final class ChunkAnimatorConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve(ChunkAnimator.MOD_ID + ".json");
+    private static final Path PATH = Platform.configDir().resolve(ChunkAnimator.MOD_ID + ".json");
 
     public static final AnimationMode DEFAULT_MODE = AnimationMode.BELOW;
     public static final EasingFunction DEFAULT_EASING = EasingFunction.SINE;

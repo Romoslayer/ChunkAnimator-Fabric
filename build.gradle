@@ -1,15 +1,46 @@
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+	id 'net.neoforged.moddev' version "${moddev_version}" apply false
+	id 'net.minecraftforge.gradle' version "${forgegradle_version}" apply false
 }
 
-subprojects {
-	apply plugin: 'net.fabricmc.fabric-loom'
+// Projects that build a jar: :mc26.x:fabric, :mc26.x:neoforge and :mc26.x:forge.
+// The :mc26.x projects themselves only hold version-specific sources and properties.
+def loaderProjects = subprojects.findAll { it.parent != rootProject }
+
+configure(loaderProjects) {
+	def loader = project.name
+	def versionProject = project.parent
+
+	apply plugin: 'java'
+	switch (loader) {
+		case 'fabric': apply plugin: 'net.fabricmc.fabric-loom'; break
+		case 'neoforge': apply plugin: 'net.neoforged.moddev'; break
+		case 'forge': apply plugin: 'net.minecraftforge.gradle'; break
+		default: throw new GradleException("Unknown loader ${loader}")
+	}
 
 	version = "${rootProject.mod_version}+mc${project.minecraft_version}"
 	group = rootProject.maven_group
 
 	base {
-		archivesName = rootProject.mod_name
+		archivesName = "${rootProject.mod_name}-${loader}"
+	}
+
+	// Shared code, then version-specific code, then loader-specific code.
+	sourceSets {
+		main {
+			java.srcDirs = [
+					rootProject.file('src/main/java'),
+					versionProject.file('src/main/java'),
+					rootProject.file("loader/${loader}/src/main/java"),
+			]
+			resources.srcDirs = [
+					rootProject.file('src/main/resources'),
+					versionProject.file('src/main/resources'),
+					rootProject.file("loader/${loader}/src/main/resources"),
+			]
+		}
 	}
 
 	repositories {
@@ -26,14 +57,64 @@ subprojects {
 		}
 	}
 
-	// Shared, version-independent code and resources live in the root /src folder.
-	sourceSets {
-		main {
-			java.srcDirs += rootProject.file('src/main/java')
-			resources.srcDirs += rootProject.file('src/main/resources')
+	def resourceProps = [
+			version                      : project.version,
+			minecraft_version            : project.minecraft_version,
+			minecraft_range              : project.minecraft_version_range,
+			minecraft_range_maven        : project.minecraft_version_range_maven,
+			loader_version               : rootProject.loader_version,
+			forge_version_range          : project.forge_version_range,
+			resource_pack_format         : project.resource_pack_format,
+			// Test runs also load a mixin that stops the game capturing the mouse (see loader/devtest).
+			devtest_mixins               : rootProject.hasProperty('smokeTest') ? '[[mixins]]\nconfig = "chunkanimator.devtest.mixins.json"\n' : '',
+	]
+	processResources {
+		inputs.properties resourceProps
+		filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml', 'META-INF/mods.toml', 'pack.mcmeta']) {
+			expand resourceProps
 		}
 	}
 
+	tasks.withType(JavaCompile).configureEach {
+		it.options.release = 25
+		it.options.encoding = 'UTF-8'
+	}
+
+	java {
+		withSourcesJar()
+		sourceCompatibility = JavaVersion.VERSION_25
+		targetCompatibility = JavaVersion.VERSION_25
+	}
+
+	// -PsmokeTest adds the development-only in-game test (NeoForge and Forge; Fabric has its own game test).
+	if (rootProject.hasProperty('smokeTest') && loader != 'fabric') {
+		sourceSets.main.java.srcDirs += [
+				rootProject.file('loader/devtest/src/main/java'),
+				rootProject.file('loader/devtest/src/mixin/java'),
+				rootProject.file("loader/${loader}/src/devtest/java"),
+		]
+		sourceSets.main.resources.srcDirs += rootProject.file('loader/devtest/src/mixin/resources')
+	}
+
+	jar {
+		// Never ship the development-only test.
+		exclude 'lumien/chunkanimator/devtest/**', 'chunkanimator.devtest.mixins.json'
+		from(rootProject.file('LICENSE')) {
+			rename { "${it}_${rootProject.mod_name}" }
+		}
+	}
+
+	// Copy finished jars to /build/libs at the root for convenience.
+	tasks.register('collectJar', Copy) {
+		from tasks.named('jar')
+		into rootProject.layout.buildDirectory.dir('libs')
+	}
+	tasks.named('build') { finalizedBy 'collectJar' }
+}
+
+// ---------------------------------------------------------------- Fabric
+
+configure(loaderProjects.findAll { it.name == 'fabric' }) {
 	loom {
 		mods {
 			"${rootProject.mod_id}" {
@@ -42,13 +123,13 @@ subprojects {
 		}
 		runs {
 			client {
-				runDir = "../run/${project.minecraft_version}"
+				runDir = "../../run/fabric-${project.minecraft_version}"
 			}
 			remove server
 		}
 	}
 
-	// Automated in-game test: ./gradlew :mc26.3:runClientGameTest (add -PwithSodium for Sodium).
+	// Automated in-game test: ./gradlew :mc26.3:fabric:runClientGameTest (add -PwithSodium for Sodium).
 	// Creates a world, forces fresh chunks to load and saves screenshots mid-animation.
 	fabricApi {
 		configureTests {
@@ -86,8 +167,11 @@ subprojects {
 
 	sourceSets {
 		gametest {
-			java.srcDirs += rootProject.file('src/gametest/java')
-			resources.srcDirs += rootProject.file('src/gametest/resources')
+			java.srcDirs += rootProject.file('loader/fabric/src/gametest/java')
+			resources.srcDirs += rootProject.file('loader/fabric/src/gametest/resources')
+			// Stops the game window capturing the mouse during the test.
+			java.srcDirs += rootProject.file('loader/devtest/src/mixin/java')
+			resources.srcDirs += rootProject.file('loader/devtest/src/mixin/resources')
 		}
 	}
 
@@ -103,7 +187,7 @@ subprojects {
 		compileOnly "maven.modrinth:modmenu:${project.modmenu_version}"
 		localRuntime "maven.modrinth:modmenu:${project.modmenu_version}"
 
-		// Run the dev client with Sodium: ./gradlew :mc26.3:runClient -PwithSodium
+		// Run the dev client with Sodium: ./gradlew :mc26.3:fabric:runClient -PwithSodium
 		// Add Iris (needs Sodium) with -PwithIris
 		if (rootProject.hasProperty('withSodium') || rootProject.hasProperty('withIris')) {
 			localRuntime "maven.modrinth:sodium:${project.sodium_version}"
@@ -112,40 +196,116 @@ subprojects {
 			localRuntime "maven.modrinth:iris:${project.iris_version}"
 		}
 	}
+}
 
-	processResources {
-		def props = [
-				version         : project.version,
-				minecraft_range : project.minecraft_version_range,
-				loader_version  : rootProject.loader_version
-		]
-		inputs.properties props
-		filesMatching('fabric.mod.json') {
-			expand props
+// ---------------------------------------------------------------- NeoForge
+
+configure(loaderProjects.findAll { it.name == 'neoforge' }) {
+	neoForge {
+		version = project.neoforge_version
+		runs {
+			client {
+				client()
+				gameDirectory = rootProject.file("run/neoforge-${project.minecraft_version}")
+				// -PsmokeTest runs the in-game smoke test (see loader/devtest) and then quits.
+				if (rootProject.hasProperty('smokeTest')) {
+					systemProperty 'chunkanimator.smokeTest', 'true'
+				}
+				// -PsmokeTestServer=localhost:25565 makes the smoke test join that server instead.
+				if (rootProject.hasProperty('smokeTestServer')) {
+					systemProperty 'chunkanimator.smokeTest.server', rootProject.property('smokeTestServer').toString()
+				}
+				// -PgraphicsApi=vulkan (or opengl) forces Minecraft's rendering backend.
+				if (rootProject.hasProperty('graphicsApi')) {
+					programArguments.addAll '--graphicsBackend', rootProject.property('graphicsApi').toString()
+				}
+			}
+			// A dedicated server with the mod installed, to check it stays inert there.
+			server {
+				server()
+				gameDirectory = rootProject.file("run/neoforge-${project.minecraft_version}-server")
+				programArgument '--nogui'
+			}
+		}
+		mods {
+			"${rootProject.mod_id}" {
+				sourceSet sourceSets.main
+			}
 		}
 	}
 
-	tasks.withType(JavaCompile).configureEach {
-		it.options.release = 25
-		it.options.encoding = 'UTF-8'
+	dependencies {
+		// Sodium's NeoForge jar only wraps a nested jar, so compile against the Fabric jar: the classes
+		// used here are the same on both loaders.
+		compileOnly "maven.modrinth:sodium:${project.sodium_version}"
+		// ./gradlew :mc26.3:neoforge:runClient -PwithSodium (or -PwithIris)
+		if (rootProject.hasProperty('withSodium') || rootProject.hasProperty('withIris')) {
+			runtimeOnly "maven.modrinth:sodium:${project.sodium_neoforge_version}"
+		}
+		if (rootProject.hasProperty('withIris')) {
+			runtimeOnly "maven.modrinth:iris:${project.iris_neoforge_version}"
+		}
+	}
+}
+
+// ---------------------------------------------------------------- Forge
+
+configure(loaderProjects.findAll { it.name == 'forge' }) {
+	java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+	minecraft {
+		runs {
+			configureEach {
+				workingDir = rootProject.layout.projectDirectory.dir("run/forge-${project.minecraft_version}")
+				// Mixin finds our config through the jar manifest in production, and through this in development.
+				args "--mixin.config=${rootProject.mod_id}.mixins.json"
+				if (rootProject.hasProperty('smokeTest')) {
+					systemProperty 'chunkanimator.smokeTest', 'true'
+					args "--mixin.config=${rootProject.mod_id}.devtest.mixins.json"
+				}
+				if (rootProject.hasProperty('smokeTestServer')) {
+					systemProperty 'chunkanimator.smokeTest.server', rootProject.property('smokeTestServer').toString()
+				}
+			}
+			register('client') {
+				// -PgraphicsApi=vulkan (or opengl) forces Minecraft's rendering backend.
+				if (rootProject.hasProperty('graphicsApi')) {
+					args '--graphicsBackend', rootProject.property('graphicsApi').toString()
+				}
+			}
+			// A dedicated server with the mod installed, to check it stays inert there.
+			register('server') {
+				workingDir = rootProject.layout.projectDirectory.dir("run/forge-${project.minecraft_version}-server")
+				args '--nogui'
+			}
+		}
 	}
 
-	java {
-		withSourcesJar()
-		sourceCompatibility = JavaVersion.VERSION_25
-		targetCompatibility = JavaVersion.VERSION_25
+	repositories {
+		minecraft.mavenizer(it)
+		maven fg.forgeMaven
+		maven fg.minecraftLibsMaven
+		mavenCentral()
+	}
+
+	dependencies {
+		implementation minecraft.dependency("net.minecraftforge:forge:${project.forge_version}")
+		// Sodium and Iris have no Forge builds. The shared code still references Sodium classes
+		// (only loaded when Sodium is present), so compile against the Fabric jar.
+		compileOnly "maven.modrinth:sodium:${project.sodium_version}"
 	}
 
 	jar {
-		from(rootProject.file('LICENSE')) {
-			rename { "${it}_${rootProject.mod_name}" }
+		manifest {
+			attributes['MixinConfigs'] = "${rootProject.mod_id}.mixins.json"
 		}
 	}
 
-	// Copy finished jars to /build/libs at the root for convenience.
-	tasks.register('collectJar', Copy) {
-		from tasks.named('jar')
-		into rootProject.layout.buildDirectory.dir('libs')
+	// Forge ships the original Sponge Mixin, which only knows compatibility levels up to Java 21.
+	processResources {
+		inputs.property('mixinCompatibilityLevel', 'JAVA_21')
+		filesMatching("${rootProject.mod_id}.mixins.json") {
+			filter { line -> line.replace('"JAVA_25"', '"JAVA_21"') }
+		}
 	}
-	tasks.named('build') { finalizedBy 'collectJar' }
 }

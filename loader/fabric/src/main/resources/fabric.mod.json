@@ -21,10 +21,10 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "lumien.chunkanimator.ChunkAnimator"
+      "lumien.chunkanimator.fabric.ChunkAnimatorFabric"
     ],
     "modmenu": [
-      "lumien.chunkanimator.compat.ModMenuIntegration"
+      "lumien.chunkanimator.fabric.ModMenuIntegration"
     ]
   },
   "mixins": [

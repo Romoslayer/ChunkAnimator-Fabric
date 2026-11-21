@@ -43,7 +43,14 @@ public final class ShaderPatcher {
 
     private static final Pattern SODIUM_GLOBALS_BLOCK = Pattern.compile("layout\\s*\\(\\s*std140\\s*\\)\\s*uniform\\s+u_Globals\\b");
     private static final Pattern SODIUM_GLOBALS_LAST_MEMBER = Pattern.compile("bool\\s+u_UseRGSS\\s*;");
-    private static final Pattern SODIUM_POSITION = Pattern.compile("vec3\\s+position\\s*=\\s*_vert_position\\s*\\+\\s*translation\\s*;");
+    /**
+     * Sodium 0.9.2: {@code vec3 position = _vert_position + translation;} (translation is camera-relative).
+     * Sodium 0.9.3+: {@code vec3 position = (_vert_position + translation) - u_CameraOffset;} (translation is
+     * relative to the camera's block position and {@code u_CameraOffset} is the camera's sub-block part).
+     */
+    private static final Pattern SODIUM_POSITION = Pattern.compile(
+            "vec3\\s+position\\s*=\\s*(?:\\(\\s*_vert_position\\s*\\+\\s*translation\\s*\\)\\s*-\\s*(u_CameraOffset)"
+            + "|_vert_position\\s*\\+\\s*translation)\\s*;");
 
     private static volatile boolean sodiumGlobalsPatched;
     private static volatile boolean sodiumVertexPatched;
@@ -195,8 +202,10 @@ public final class ShaderPatcher {
                     + "while Sodium is rendering. This Sodium version may not be supported yet.");
             return source;
         }
+        // chunkanim_offset() takes the section origin relative to the camera.
+        final String origin = position.group(1) != null ? "translation - " + position.group(1) : "translation";
         final String withOffset = position.replaceFirst(Matcher.quoteReplacement(
-                position.group() + "\n    position += chunkanim_offset(translation);"));
+                position.group() + "\n    position += chunkanim_offset(" + origin + ");"));
         final String patched = insertBeforeMain(withOffset, SodiumShaderSource.OFFSET_FUNCTION);
         if (patched == null) {
             sodiumVertexPatched = false;

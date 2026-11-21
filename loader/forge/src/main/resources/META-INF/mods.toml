@@ -1,0 +1,29 @@
+modLoader = "javafml"
+loaderVersion = "${forge_version_range}"
+license = "MIT"
+issueTrackerURL = "https://github.com/Romoslayer/ChunkAnimator-Fabric/issues"
+clientSideOnly = true
+
+[[mods]]
+modId = "chunkanimator"
+version = "${version}"
+displayName = "Chunk Animator"
+displayURL = "https://github.com/Romoslayer/ChunkAnimator-Fabric"
+logoFile = "assets/chunkanimator/icon.png"
+authors = "Lumien"
+credits = "Harley O'Connor, Romoslayer. Easing equations by Robert Penner."
+description = '''A small client side mod that animates the appearance of chunks so that they don't just instantly appear. Works with Minecraft's renderer.'''
+
+[[dependencies.chunkanimator]]
+modId = "forge"
+mandatory = true
+versionRange = "${forge_version_range}"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.chunkanimator]]
+modId = "minecraft"
+mandatory = true
+versionRange = "${minecraft_range_maven}"
+ordering = "NONE"
+side = "CLIENT"

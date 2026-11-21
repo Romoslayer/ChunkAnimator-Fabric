@@ -1,6 +1,6 @@
 package lumien.chunkanimator.mixin;
 
-import net.fabricmc.loader.api.FabricLoader;
+import lumien.chunkanimator.platform.Platform;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -20,7 +20,7 @@ import java.util.Set;
 public final class ChunkAnimatorMixinPlugin implements IMixinConfigPlugin {
 
     /** Mods that replace the chunk renderer in a way Chunk Animator does not support. */
-    private static final String[] OTHER_CHUNK_RENDERERS = {"canvas", "vulkanmod"};
+    private static final String[] OTHER_CHUNK_RENDERERS = {"canvas", "vulkanmod", "embeddium"};
 
     private boolean sodium;
     private boolean iris;
@@ -28,13 +28,12 @@ public final class ChunkAnimatorMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
-        final FabricLoader loader = FabricLoader.getInstance();
-        this.sodium = loader.isModLoaded("sodium");
-        this.iris = this.sodium && loader.isModLoaded("iris");
+        this.sodium = Platform.isModLoadingEarly("sodium");
+        this.iris = this.sodium && Platform.isModLoadingEarly("iris");
 
         boolean otherRenderer = false;
         for (String id : OTHER_CHUNK_RENDERERS) {
-            otherRenderer |= loader.isModLoaded(id);
+            otherRenderer |= Platform.isModLoadingEarly(id);
         }
         this.vanillaRenderer = !this.sodium && !otherRenderer;
     }

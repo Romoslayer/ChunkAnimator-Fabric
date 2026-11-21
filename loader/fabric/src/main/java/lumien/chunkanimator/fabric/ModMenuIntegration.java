@@ -1,4 +1,4 @@
-package lumien.chunkanimator.compat;
+package lumien.chunkanimator.fabric;
 
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;

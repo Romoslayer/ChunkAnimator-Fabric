@@ -1,8 +1,8 @@
-# Chunk Animator (Fabric)
+# Chunk Animator
 
-An unofficial continuation of [Chunk Animator](https://github.com/Harleyoc1/ChunkAnimator) for Fabric on Minecraft
-26.2 and 26.3. It isn't affiliated with or endorsed by the original authors. It's a small client-side mod that animates
-chunks as they load, so they don't just pop in.
+An unofficial continuation of [Chunk Animator](https://github.com/Harleyoc1/ChunkAnimator) for Fabric, NeoForge and
+Forge on Minecraft 26.2 and 26.3. It isn't affiliated with or endorsed by the original authors. It's a small
+client-side mod that animates chunks as they load, so they don't just pop in.
 
 ## Credits
 
@@ -13,11 +13,11 @@ see `src/main/java/penner/easing`).
 
 ## What's different from the original
 
-- **Fabric** instead of NeoForge, for Minecraft **26.2** and **26.3**.
-- **Sodium and Iris support.** Chunks animate with Sodium, and with Iris shader packs too.
+- **Fabric, NeoForge and Forge**, for Minecraft **26.2** and **26.3**.
+- **Sodium and Iris support** (Fabric and NeoForge). Chunks animate with Sodium, and with Iris shader packs too.
 - **Works with Minecraft's OpenGL and Vulkan renderers.**
-- **Settings** live in `config/chunkanimator.json`. You can change them through
-  [Mod Menu](https://modrinth.com/mod/modmenu) (optional) or the `/chunkanimator` command.
+- **Settings** live in `config/chunkanimator.json`. You can change them from the mods list (NeoForge, Forge, or
+  [Mod Menu](https://modrinth.com/mod/modmenu) on Fabric) or with the `/chunkanimator` command.
 - **Small behaviour changes:**
   - Placing the first block in an empty section no longer makes that section animate.
   - With Sodium, `HORIZONTAL_SLIDE` and `HORIZONTAL_SLIDE_ALTERNATE` look the same.
@@ -31,7 +31,8 @@ Requires Java 25.
 ./gradlew build
 ```
 
-Jars for both Minecraft versions are written to `build/libs/`.
+Jars for every loader and Minecraft version are written to `build/libs/`, for example
+`ChunkAnimator-neoforge-1.5.0+mc26.3.jar`.
 
 ## License
 

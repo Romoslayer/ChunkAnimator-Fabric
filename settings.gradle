@@ -4,6 +4,14 @@ pluginManagement {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
 		}
+		maven {
+			name = 'NeoForged'
+			url = 'https://maven.neoforged.net/releases'
+		}
+		maven {
+			name = 'MinecraftForge'
+			url = 'https://maven.minecraftforge.net/'
+		}
 		mavenCentral()
 		gradlePluginPortal()
 	}
@@ -11,7 +19,13 @@ pluginManagement {
 
 rootProject.name = 'ChunkAnimator'
 
-// One subproject per supported Minecraft version. Each one compiles the shared
-// sources in /src plus its own version-specific rendering hooks.
-include 'mc26.2'
-include 'mc26.3'
+// One project per Minecraft version and mod loader, e.g. :mc26.3:neoforge.
+// Each compiles the shared code in /src, the version-specific code in /mc26.x/src
+// and the loader-specific code in /loader/<loader>/src.
+['26.2', '26.3'].each { mc ->
+	['fabric', 'neoforge', 'forge'].each { loader ->
+		// The folders only hold build output, so they are not in git; create them on demand.
+		file("mc${mc}/${loader}").mkdirs()
+		include "mc${mc}:${loader}"
+	}
+}
